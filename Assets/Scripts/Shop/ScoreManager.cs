@@ -1,14 +1,27 @@
 using UnityEngine;
-using TMPro;          // or TMPro if using TextMeshPro
+using TMPro;
+using System.Collections;
 
 public class ScoreManager : MonoBehaviour
 {
     public static ScoreManager instance;
-    public int coins = 0;
-    public ShopSystem shopSystem;
+    public double eulers = 0;
+    public ShopSystem shop1;
+    public ShopSystem shop2;
+    public double eps = 0;
 
-    [Header("Hook your UI Text here")]
-    public TMP_Text coinText;         // Or TMP_Text if using TextMeshPro
+
+    public Collider secondShopHitbox;
+
+    public GameObject secondShopVisuals;
+
+
+    public int secondShopUnlockThreshold = 100;
+
+    
+    private bool secondShopUnlocked = false;
+
+    public TMP_Text coinText;  
 
     void Awake()
     {
@@ -19,13 +32,46 @@ public class ScoreManager : MonoBehaviour
     void Start()
     {
         UpdateCoinUI();
+        StartCoroutine(GenerateIdleCoins());
+
+        if (secondShopHitbox != null) secondShopHitbox.enabled = false;
+        if (secondShopVisuals != null) secondShopVisuals.SetActive(false);
     }
 
-    public bool TrySpendCoins(int amount)
+    private IEnumerator GenerateIdleCoins()
     {
-        if (coins >= amount)
+        while (true)
         {
-            coins -= amount;
+            UpdateEps();
+            yield return new WaitForSeconds(1f);
+            eulers += eps;
+            UpdateCoinUI();
+            if (!secondShopUnlocked && eulers >= secondShopUnlockThreshold)
+            {
+                secondShopUnlocked = true;
+
+                
+                if (secondShopHitbox != null) secondShopHitbox.enabled = true;
+                
+                if (secondShopVisuals != null) secondShopVisuals.SetActive(true);
+            }
+        }
+    }
+
+    public void UpdateEps()
+    {
+        int producer1ct = shop2.upgrades[0].purchaseCount;
+        int producer2ct = shop2.upgrades[1].purchaseCount;
+        int producer3ct = shop2.upgrades[2].purchaseCount;
+        int producer4ct = shop2.upgrades[3].purchaseCount;
+        eps = ((0.1 * (1 + producer3ct) * producer1ct) + (0.5 * producer2ct)) * Mathf.Pow(2, producer4ct); ;
+    }
+
+    public bool TrySpendCoins(double amount)
+    {
+        if (eulers >= amount)
+        {
+            eulers -= amount;
             UpdateCoinUI();
             return true;
         }
@@ -33,15 +79,16 @@ public class ScoreManager : MonoBehaviour
     }
 
 
-    public void AddCoin(int amount = 1)
+    public void AddCoin(double amount = 1)
     {
-        int upgradeAddCoin = shopSystem.upgrades[0].purchaseCount;
-        coins += amount + upgradeAddCoin;
+        int upgradeAddCoin = shop1.upgrades[0].purchaseCount;
+        int upgradeDoubleCoin = shop1.upgrades[1].purchaseCount;
+        eulers += (amount + upgradeAddCoin) * (Mathf.Pow(2,upgradeDoubleCoin));
         UpdateCoinUI();
     }
 
     void UpdateCoinUI()
     {
-        coinText.text = "Eulers: " + coins.ToString();
+        coinText.text = "Eulers: " + System.Math.Round(eulers).ToString();
     }
 }

@@ -2,26 +2,31 @@
 
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class PlayerAttack : MonoBehaviour
 {
-    [Header("Attack Settings")]
-    public int damage = 25;                    
+  
+    public double damage = 25;                    
     public float attackRange = 2.5f;           
-    public float attackCooldown = 0.5f;      
-    [Header("References")]
-    //public Animator animator;                   
+    public double attackCooldown = 2;      
+                     
     public Transform attackOrigin;
-    public ShopSystem shop;
+
+    
+    public Image crosshairImage;
+
 
     private float lastAttackTime;
     private PlayerInputActions inputActions;
+    public ShopSystem shop1;
+    public ShopSystem shop2;
 
     void Awake()
     {
-        // Instantiate the generated InputActions
+   
         inputActions = new PlayerInputActions();
-        // Subscribe to the Attack action
+
         inputActions.Player.Attack.performed += ctx => HandleAttack();
     }
 
@@ -35,17 +40,28 @@ public class PlayerAttack : MonoBehaviour
         inputActions.Disable();
     }
 
+
+    void Update()
+    {
+        if (crosshairImage != null)
+        {
+            int upgradeAttackSpeed = shop1.upgrades[3].purchaseCount;
+            float t = (Time.time - lastAttackTime) / ((float) attackCooldown / Mathf.Pow(2, upgradeAttackSpeed));
+            
+            crosshairImage.fillAmount = Mathf.Clamp01(t);
+        }
+    }
+
+
     void HandleAttack()
     {
-        if (Time.time < lastAttackTime + attackCooldown)
+        int upgradeAttackSpeed = shop1.upgrades[3].purchaseCount;
+        if (Time.time < lastAttackTime + (attackCooldown / Mathf.Pow(2, upgradeAttackSpeed)))
             return;
 
         lastAttackTime = Time.time;
-
-        // Play attack animation
-        //animator?.SetTrigger("Attack");
-
-        // Raycast for hit detection
+        
+        
         RaycastHit hit;
         Vector3 origin = attackOrigin != null ? attackOrigin.position : Camera.main.transform.position;
         Vector3 direction = Camera.main.transform.forward;
@@ -54,15 +70,21 @@ public class PlayerAttack : MonoBehaviour
         {
             if (hit.collider.CompareTag("Enemy"))
             {
+                int attackUpgradesBought = shop1.upgrades[2].purchaseCount;
                 EnemyHealth enemyHealth = hit.collider.GetComponent<EnemyHealth>();
                 if (enemyHealth != null)
-                    enemyHealth.TakeDamage(damage);
+                    enemyHealth.TakeDamage(damage + (5 * attackUpgradesBought));
 
             }
-            if (hit.collider.CompareTag("Shop"))
+            if (hit.collider.CompareTag("Shop1"))
             {
-                shop.OpenShop();
+               shop1.OpenShop();
             }
+            if (hit.collider.CompareTag("Shop2"))
+            { 
+                shop2.OpenShop();
+            }
+
         }
     }
 }

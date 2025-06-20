@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Enemy
   - Shop
+  - Waypoint
+  - Shop1
+  - Shop2
   layers:
   - Default
   - TransparentFX

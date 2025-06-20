@@ -5,22 +5,23 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Decoupled ShopSystem: handles in-world shop UI and purchase counts.
-/// Score management and effect application are done in separate scripts.
-/// Attach this to a GameObject in your scene.
-/// </summary>
+
 public class ShopSystem : MonoBehaviour
 {
-    [Header("UI References")]
-    public GameObject shopPanel;           // In-world shop panel UI
-    public Transform itemsContainer;       // Container for shop item buttons
-    public GameObject itemButtonPrefab;    // Prefab for shop item button
+    
+    public GameObject shopPanel;          
+    public Transform itemsContainer;      
+    public GameObject itemButtonPrefab;    
 
-    [Header("Available Upgrades")]
+    
     public List<UpgradeData> upgrades = new List<UpgradeData>();
-
+    public BoxCollider producerSpawnArea;
     public MonoBehaviour[] controlScripts;
+
+    public GameObject bushPrefab;
+    public GameObject flowerPrefab;
+    public GameObject mushroomPrefab;
+    public GameObject treePrefab;
 
     void Awake()
     {
@@ -28,31 +29,51 @@ public class ShopSystem : MonoBehaviour
         if (shopPanel != null)
             shopPanel.SetActive(false);
 
-        // Create buttons for each upgrade
+
         PopulateShop();
     }
 
-    /// <summary>Show the shop UI.</summary>
+    private void SpawnProducer(GameObject producerPrefab)
+    {
+        if (producerSpawnArea != null)
+        {
+
+            Bounds b = producerSpawnArea.bounds;
+
+
+            float x = UnityEngine.Random.Range(b.min.x, b.max.x);
+            float y = 0;
+            float z = UnityEngine.Random.Range(b.min.z, b.max.z);
+
+            Vector3 spawnPos = new Vector3(x, y, z);
+
+            Instantiate(producerPrefab, spawnPos, Quaternion.identity);
+        }
+        else
+        {
+            Debug.LogWarning("ProducerSpawnArea not set on " + name);
+        }
+    }
+
+
     public void OpenShop()
     {
         shopPanel.SetActive(true);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        // 2) disable movement/look
+   
         foreach (var s in controlScripts) s.enabled = false;
     }
 
-    /// <summary>Hide the shop UI.</summary>
     public void CloseShop()
     {
         shopPanel.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        // 3b) re-enable movement/look
         foreach (var s in controlScripts) s.enabled = true;
     }
 
-    /// <summary>Instantiate and configure a button for each upgrade.</summary>
+ 
     private void PopulateShop()
     {
         foreach (var data in upgrades)
@@ -80,23 +101,38 @@ public class ShopSystem : MonoBehaviour
         }
     }
 
-    /// <summary>Update button label based on current purchase count.</summary>
+  
     private void UpdateButton(TMP_Text label, UpgradeData data)
     {
-        label.text = $"{data.upgradeName} (Bought: {data.purchaseCount}) - {data.cost} coins";
+        label.text = $"{data.upgradeName} (Bought: {data.purchaseCount})\nCost: {data.cost} Eulers";
     }
-
-    /// <summary>Handle purchase: deduct coins, increment count, refresh label.</summary>
+ 
     private void OnBuy(UpgradeData data, TMP_Text label)
     {
-        // Attempt to spend coins via ScoreManager (separate script)
+     
         if (ScoreManager.instance.TrySpendCoins(data.cost))
         {
             // Track number of times purchased
             data.purchaseCount++;
+            data.cost = Math.Round(data.cost * data.costModifier);
             UpdateButton(label, data);
 
-            // Other systems can read data.purchaseCount to apply effects
+            if (data.upgradeType == UpgradeType.Flower)
+            {
+                SpawnProducer(flowerPrefab);
+            }
+            if (data.upgradeType == UpgradeType.Bush)
+            {
+                SpawnProducer(bushPrefab);
+            }
+            if (data.upgradeType == UpgradeType.Mushroom)
+            {
+                SpawnProducer(mushroomPrefab);
+            }
+            if (data.upgradeType == UpgradeType.Tree)
+            {
+                SpawnProducer(treePrefab);
+            }
         }
     }
 
@@ -104,18 +140,24 @@ public class ShopSystem : MonoBehaviour
     public class UpgradeData
     {
         public string upgradeName;
-        public int cost;
+        public double cost;
+        public double costModifier;
         public UpgradeType upgradeType;
 
 
-        public int modifier;
-
         [HideInInspector]
-        public int purchaseCount = 0;  // Tracks how many times this upgrade was bought
+        public int purchaseCount = 0; 
     }
 
     public enum UpgradeType
     {
-        CoinPerKill
+        CoinPerKill,
+        AttackDamage,
+        EulersPerKillDouble,
+        AttackSpeed,
+        Flower,
+        Bush,
+        Mushroom,
+        Tree,
     }
 }
